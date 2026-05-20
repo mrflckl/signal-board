@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bewertung</title>
+  <style>
+    :root {
+      --accent:  #001E46;
+      --star:    #f59e0b;
+      --empty:   #d1d5db;
+      --green:   #16a34a;
+      --bg:      #f8fafc;
+      --card:    #ffffff;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --r: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 24px 16px 56px; }
+
+    /* Header */
+    .hdr { background: var(--accent); color: #fff; border-radius: var(--r);
+           padding: 22px 26px; margin-bottom: 22px; }
+    .hdr h1 { font-size: 1.15rem; font-weight: 700; }
+    .hdr p  { font-size: 0.82rem; opacity: .65; margin-top: 4px; }
+
+    /* Abschnitts-Label */
+    .sec-label { font-size: .68rem; font-weight: 800; text-transform: uppercase;
+                 letter-spacing: .1em; color: #fff; border-radius: 4px;
+                 padding: 3px 10px; display: inline-block; margin-bottom: 10px; }
+    .sec-label.acc { background: #16a34a; }
+    .sec-label.rej { background: #6b7280; }
+    .sec-hint { font-size: .78rem; color: var(--muted); margin-bottom: 10px; }
+
+    /* Karte */
+    .card { background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--r); padding: 16px 18px; margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .card-title { font-size: 1rem; font-weight: 700; color: var(--accent);
+                  margin-bottom: 14px; line-height: 1.35; }
+    .card-title.rej { color: var(--muted); }
+
+    /* Felder */
+    .field { margin-bottom: 12px; }
+    .field-label { font-size: .72rem; font-weight: 600; color: var(--muted);
+                   text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .row .field { flex: 1; min-width: 110px; }
+
+    /* Sterne */
+    .stars { display: flex; gap: 3px; cursor: pointer; user-select: none; }
+    .stars span { font-size: 1.55rem; color: var(--empty); line-height: 1;
+                  transition: color .1s; }
+    .stars span.on { color: var(--star); }
+
+    /* Toggle-Buttons */
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { border: 2px solid var(--border); background: #fff; border-radius: 5px;
+           padding: 5px 14px; font-size: .84rem; font-weight: 600;
+           cursor: pointer; color: var(--muted); transition: all .15s; }
+    .btn.on-ja  { border-color: var(--green); background: #dcfce7; color: #15803d; }
+    .btn.on-nein{ border-color: #d1d5db; background: #f9fafb; color: var(--muted); }
+
+    /* Textarea / Input */
+    textarea, input[type=number] {
+      width: 100%; border: 1px solid var(--border); border-radius: 5px;
+      padding: 8px 10px; font-size: .85rem; font-family: inherit; color: var(--text);
+    }
+    textarea { resize: vertical; min-height: 52px; }
+    input[type=number] { width: 140px; }
+    textarea:focus, input:focus { outline: none; border-color: #0055cc; }
+
+    /* Trennlinie */
+    .divider { height: 1px; background: var(--border); margin: 22px 0; }
+
+    /* Speichern-Button */
+    .save { width: 100%; background: var(--accent); color: #fff; border: none;
+            border-radius: var(--r); padding: 14px; font-size: 1rem; font-weight: 700;
+            cursor: pointer; margin-top: 22px; transition: opacity .2s; }
+    .save:hover { opacity: .88; }
+    .save:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* Meldungen */
+    .msg { border-radius: var(--r); padding: 13px 16px; margin-top: 14px;
+           font-size: .88rem; font-weight: 600; }
+    .msg.ok  { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .msg.err { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+
+    /* Kein Link */
+    #no-data { text-align: center; padding: 64px 20px; color: var(--muted); }
+    #no-data h2 { font-size: 1.1rem; margin-bottom: 8px; color: var(--text); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div id="no-data" style="display:none">
+    <h2>Kein Link erkannt</h2>
+    <p>Bitte öffne diese Seite über den Link in der Tagesbrief-Mail.</p>
+  </div>
+  <div id="app" style="display:none">
+    <div class="hdr">
+      <h1 id="hdr-title">Themenbewertung</h1>
+      <p id="hdr-sub"></p>
+    </div>
+    <div id="acc-section"></div>
+    <div class="divider" id="rej-divider" style="display:none"></div>
+    <div id="rej-section" style="display:none">
+      <span class="sec-label rej">Abgelehnte Themen</span>
+      <p class="sec-hint">Diese Themen wurden heute nicht ausgewählt.
+         Markiere sie wenn du sie lieber gehabt hättest.</p>
+      <div id="rej-cards"></div>
+    </div>
+    <button class="save" id="save-btn" onclick="saveAll()">Bewertung speichern</button>
+    <div id="msg"></div>
+  </div>
+</div>
+
+<script>
+// ── Zustand ──────────────────────────────────────────────────────────────────
+let G = null; // { token, data }
+
+// ── URL-Hash lesen ───────────────────────────────────────────────────────────
+function parseHash() {
+  const h = location.hash.slice(1);
+  if (!h) return null;
+  const p = new URLSearchParams(h);
+  const t = p.get('t'), d = p.get('d');
+  if (!t || !d) return null;
+  try   { return { token: t, data: JSON.parse(atob(d)) }; }
+  catch { return null; }
+}
+
+// ── Krypto (Web Crypto API – AES-GCM 256) ───────────────────────────────────
+async function deriveKey(token) {
+  const raw = await crypto.subtle.digest(
+    'SHA-256', new TextEncoder().encode(token));
+  return crypto.subtle.importKey(
+    'raw', raw, { name: 'AES-GCM' }, false, ['encrypt']);
+}
+
+async function encrypt(text, token) {
+  const key = await deriveKey(token);
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const enc = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv }, key, new TextEncoder().encode(text));
+  const out = new Uint8Array(12 + enc.byteLength);
+  out.set(iv); out.set(new Uint8Array(enc), 12);
+  // btoa-sicheres Base64
+  return btoa(Array.from(out, b => String.fromCharCode(b)).join(''));
+}
+
+// ── GitHub Gist API ──────────────────────────────────────────────────────────
+const GIST_DESC = 'sb-feedback-v1';
+
+async function ghFetch(url, opts, token) {
+  const r = await fetch(url, {
+    ...opts,
+    headers: {
+      'Authorization': `token ${token}`,
+      'Content-Type': 'application/json',
+      ...( opts.headers || {} )
+    }
+  });
+  if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+
+async function findOrCreateGist(token, filename, content) {
+  // Gist mit passender Beschreibung suchen
+  let gistId = null;
+  for (let page = 1; page <= 5 && !gistId; page++) {
+    const list = await ghFetch(
+      `https://api.github.com/gists?per_page=100&page=${page}`, {}, token);
+    if (!list.length) break;
+    const found = list.find(g => g.description === GIST_DESC);
+    if (found) gistId = found.id;
+  }
+
+  if (gistId) {
+    // Existierende Gist aktualisieren
+    await ghFetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ files: { [filename]: { content } } })
+    }, token);
+  } else {
+    // Neue geheime Gist anlegen
+    await ghFetch('https://api.github.com/gists', {
+      method: 'POST',
+      body: JSON.stringify({
+        description: GIST_DESC,
+        public: false,
+        files: { [filename]: { content } }
+      })
+    }, token);
+  }
+}
+
+// ── Sterne ───────────────────────────────────────────────────────────────────
+function starHtml(uid) {
+  return `<div class="stars" id="s-${uid}" data-val="">` +
+    [1,2,3,4,5].map(v =>
+      `<span data-v="${v}" onclick="setStar('${uid}',${v})">★</span>`
+    ).join('') + '</div>';
+}
+
+function setStar(uid, val) {
+  const el = document.getElementById('s-' + uid);
+  el.querySelectorAll('span').forEach((s,i) =>
+    s.classList.toggle('on', i < val));
+  el.dataset.val = val;
+}
+
+function getStarVal(uid) {
+  const el = document.getElementById('s-' + uid);
+  return el ? (parseInt(el.dataset.val) || null) : null;
+}
+
+// ── Toggle-Buttons ───────────────────────────────────────────────────────────
+function toggleHtml(uid, jaLabel='Ja', neinLabel='Nein') {
+  return `<div class="btns" id="tg-${uid}" data-val="">` +
+    `<button class="btn" id="tg-${uid}-ja"  onclick="setTgl('${uid}','ja')">${jaLabel}</button>` +
+    `<button class="btn" id="tg-${uid}-nein" onclick="setTgl('${uid}','nein')">${neinLabel}</button>` +
+    `</div>`;
+}
+
+function setTgl(uid, val) {
+  const el = document.getElementById('tg-' + uid);
+  el.dataset.val = val;
+  document.getElementById(`tg-${uid}-ja`).className  = 'btn' + (val==='ja'   ? ' on-ja'   : '');
+  document.getElementById(`tg-${uid}-nein`).className = 'btn' + (val==='nein' ? ' on-nein' : '');
+}
+
+function getTglVal(uid) {
+  const v = document.getElementById('tg-' + uid)?.dataset.val;
+  if (v === 'ja')   return true;
+  if (v === 'nein') return false;
+  return null;
+}
+
+function txtVal(id) {
+  return (document.getElementById(id)?.value || '').trim() || null;
+}
+
+// ── Karten bauen ─────────────────────────────────────────────────────────────
+function buildAccCard(t) {
+  const id = t.id;
+  return `
+<div class="card">
+  <div class="card-title">${esc(t.t)}</div>
+  <div class="row">
+    <div class="field">
+      <div class="field-label">Treffsicherheit</div>
+      ${starHtml('tf-' + id)}
+    </div>
+    <div class="field">
+      <div class="field-label">Umsetzungs-Potenzial</div>
+      ${starHtml('up-' + id)}
+    </div>
+  </div>
+  <div class="field" style="margin-top:4px">
+    <div class="field-label">Umgesetzt?</div>
+    ${toggleHtml('um-' + id, 'Ja ✓', 'Nein')}
+  </div>
+  <div class="field">
+    <div class="field-label">Performance – Klicks (optional, kann nachgetragen werden)</div>
+    <input type="number" id="kl-${id}" placeholder="z. B. 14500" min="0">
+  </div>
+  <div class="field">
+    <div class="field-label">Anmerkungen (optional)</div>
+    <textarea id="an-${id}" placeholder="Feedback, Ideen, Einschätzungen…"></textarea>
+  </div>
+</div>`;
+}
+
+function buildRejCard(t) {
+  const id = t.id;
+  return `
+<div class="card">
+  <div class="card-title rej">${esc(t.t)}</div>
+  <div class="field">
+    <div class="field-label">Hätte ich gewollt?</div>
+    ${toggleHtml('hw-' + id, 'Ja, hätte gepasst', 'Nein, passt nicht')}
+  </div>
+  <div class="field">
+    <div class="field-label">Begründung (optional)</div>
+    <textarea id="bg-${id}" placeholder="Warum wärst du anders entschieden?"></textarea>
+  </div>
+</div>`;
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Speichern ────────────────────────────────────────────────────────────────
+async function saveAll() {
+  const btn = document.getElementById('save-btn');
+  const msgEl = document.getElementById('msg');
+  btn.disabled = true;
+  btn.textContent = 'Speichert…';
+  msgEl.className = 'msg';
+  msgEl.textContent = '';
+
+  try {
+    const ratings = [];
+
+    // Ausgewählte Themen
+    for (const t of (G.data.a || [])) {
+      ratings.push({
+        id:                  t.id,
+        titel:               t.t,
+        format:              t.f || '',
+        ressort:             t.r || '',
+        accepted:            true,
+        treffsicherheit:     getStarVal('tf-' + t.id),
+        umsetzung_potenzial: getStarVal('up-' + t.id),
+        umgesetzt:           getTglVal('um-' + t.id),
+        performance_klicks:  parseInt(document.getElementById('kl-' + t.id)?.value) || null,
+        anmerkungen:         txtVal('an-' + t.id),
+      });
+    }
+
+    // Abgelehnte Themen (nur wenn bewertet)
+    for (const t of (G.data.r || [])) {
+      const hw = getTglVal('hw-' + t.id);
+      if (hw === null) continue; // nicht angefasst → weglassen
+      ratings.push({
+        id:                  t.id,
+        titel:               t.t,
+        accepted:            false,
+        haette_ich_gewollt:  hw,
+        begruendung:         txtVal('bg-' + t.id),
+      });
+    }
+
+    const payload = JSON.stringify({
+      date:     G.data.d,
+      saved_at: new Date().toISOString(),
+      ratings,
+    });
+
+    const encrypted = await encrypt(payload, G.token);
+    const filename  = `fb_${G.data.d}.json`;
+
+    await findOrCreateGist(G.token, filename, encrypted);
+
+    btn.textContent = '✓ Gespeichert';
+    msgEl.textContent = 'Bewertung erfolgreich gespeichert. Du kannst die Seite schließen.';
+    msgEl.className = 'msg ok';
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Nochmal versuchen';
+    msgEl.textContent = `Fehler: ${e.message}`;
+    msgEl.className = 'msg err';
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  G = parseHash();
+  if (!G || !G.data) {
+    document.getElementById('no-data').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('app').style.display = 'block';
+
+  // Header
+  let dl = G.data.d || '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dl)) {
+    const [y,m,d] = dl.split('-');
+    dl = `${d}.${m}.${y}`;
+  }
+  document.getElementById('hdr-title').textContent = `Themenbewertung ${dl}`;
+  document.getElementById('hdr-sub').textContent =
+    `${(G.data.a||[]).length} ausgewählte · ${(G.data.r||[]).length} abgelehnte Themen`;
+
+  // Ausgewählte Themen
+  const accSec = document.getElementById('acc-section');
+  if ((G.data.a||[]).length) {
+    accSec.insertAdjacentHTML('beforeend',
+      '<span class="sec-label acc">Ausgewählte Themen</span>');
+    G.data.a.forEach(t => accSec.insertAdjacentHTML('beforeend', buildAccCard(t)));
+  }
+
+  // Abgelehnte Themen
+  if ((G.data.r||[]).length) {
+    document.getElementById('rej-section').style.display = 'block';
+    document.getElementById('rej-divider').style.display = 'block';
+    const rejCards = document.getElementById('rej-cards');
+    G.data.r.forEach(t => rejCards.insertAdjacentHTML('beforeend', buildRejCard(t)));
+  }
+})();
+</script>
+</body>
+</html>
